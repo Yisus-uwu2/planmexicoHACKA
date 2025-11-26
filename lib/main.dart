@@ -13,7 +13,7 @@ class MainApp extends StatefulWidget {
   @override
   State<MainApp> createState() => _MainAppState();
 }
-//Hola
+
 class _MainAppState extends State<MainApp> {
   final ThemeProvider _themeProvider = ThemeProvider();
 
@@ -23,7 +23,7 @@ class _MainAppState extends State<MainApp> {
       listenable: _themeProvider,
       builder: (context, _) {
         return MaterialApp(
-          title: 'Plan Méxicoo',
+          title: 'Plan México',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,

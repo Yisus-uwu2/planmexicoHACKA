@@ -4,6 +4,7 @@ import '../../web/widgets/web_sidebar.dart';
 import '../../mobile/widgets/mobile_bottom_nav.dart';
 import '../screens/home_screen.dart';
 import '../screens/polos_screen.dart';
+import '../../voice_chat_widget.dart';
 
 class ResponsiveScaffold extends StatefulWidget {
   final ThemeProvider themeProvider;
@@ -36,6 +37,8 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     switch (_selectedIndex) {
       case 0:
         return const HomeScreen();
+      case 1:
+        return const VoiceChatWidget();
       case 3:
         return const PolosScreen();
       default:
