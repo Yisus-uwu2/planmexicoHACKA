@@ -252,9 +252,9 @@ class _MexicoMapWidgetState extends State<MexicoMapWidget> with TickerProviderSt
             child: GestureDetector(
               onTap: () {}, // Evitar que el tap en el estado cierre la vista
               child: Transform.scale(
-                scale: 0.5 + (animationValue * 0.5),
+                scale: 0.5 + (animationValue.clamp(0.0, 1.0) * 0.5),
                 child: Opacity(
-                  opacity: animationValue,
+                  opacity: animationValue.clamp(0.0, 1.0),
                   child: Container(
                     width: size.width * 0.85,
                     height: size.height * 0.75,
@@ -263,13 +263,13 @@ class _MexicoMapWidgetState extends State<MexicoMapWidget> with TickerProviderSt
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF691C32).withValues(alpha: 0.3 * elevationValue),
+                          color: const Color(0xFF691C32).withValues(alpha: (0.3 * elevationValue).clamp(0.0, 1.0)),
                           blurRadius: 40 * elevationValue,
                           offset: Offset(0, 20 * elevationValue),
                           spreadRadius: 5 * elevationValue,
                         ),
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2 * elevationValue),
+                          color: Colors.black.withValues(alpha: (0.2 * elevationValue).clamp(0.0, 1.0)),
                           blurRadius: 60 * elevationValue,
                           offset: Offset(0, 30 * elevationValue),
                         ),
@@ -643,9 +643,10 @@ class MexicoMapPainter extends CustomPainter {
 
     // Sombra para efecto de elevación
     if (hoverValue > 0) {
+      final clampedHoverValue = hoverValue.clamp(0.0, 1.0);
       final shadowPaint = Paint()
-        ..color = Colors.black.withValues(alpha: 0.3 * hoverValue)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * hoverValue);
+        ..color = Colors.black.withValues(alpha: 0.3 * clampedHoverValue)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * clampedHoverValue);
       
       for (final polygon in state.polygons) {
         final shadowPath = Path();
