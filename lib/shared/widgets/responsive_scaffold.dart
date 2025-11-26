@@ -20,7 +20,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   final List<NavItem> _navItems = const [
     NavItem(icon: Icons.home_rounded, label: 'Inicio'),
     NavItem(icon: Icons.smart_toy_rounded, label: 'Asistente'),
-    NavItem(icon: Icons.analytics_rounded, label: 'Datos'),
+    NavItem(icon: Icons.analytics_rounded, label: 'Push'),
     NavItem(icon: Icons.hub_rounded, label: 'Polos'),
     NavItem(icon: Icons.poll_rounded, label: 'Encuestas'),
   ];
@@ -31,7 +31,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
 
   Widget _buildContent(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     // Mostrar pantalla según el índice seleccionado
     switch (_selectedIndex) {
       case 0:
@@ -123,7 +123,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
 
   void _showSettingsModal(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -188,7 +188,9 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
-                          isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                          isDark
+                              ? Icons.dark_mode_rounded
+                              : Icons.light_mode_rounded,
                           color: Colors.white,
                           size: 22,
                         ),
@@ -203,12 +205,16 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF1A1A2E),
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              isDark ? 'Modo oscuro activado' : 'Modo claro activado',
+                              isDark
+                                  ? 'Modo oscuro activado'
+                                  : 'Modo claro activado',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: isDark
@@ -228,7 +234,9 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                         ),
                         child: AnimatedAlign(
                           duration: const Duration(milliseconds: 200),
-                          alignment: isDark ? Alignment.centerRight : Alignment.centerLeft,
+                          alignment: isDark
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
                           child: Container(
                             width: 24,
                             height: 24,
