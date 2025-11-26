@@ -3,8 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:avatar_glow/avatar_glow.dart';
 import 'voice_chat_service.dart';
-import 'attractions.dart';
+import 'attractions.dart'; // Asegúrate de que este archivo exista
 
 class VoiceChatWidget extends StatefulWidget {
   final String defaultVoice;
@@ -18,11 +19,22 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
   final service = VoiceChatService();
   final player = AudioPlayer();
 
+  // Mantenemos la variable para la lógica interna, aunque ya no haya selector visual
   String? selectedAttraction = kAttractions.first;
   String? userText;
   String? botText;
   bool recording = false;
   bool loading = false;
+
+  final Color primaryColor = const Color(0xFF9D2449);
+  final Color darkBackground = const Color(0xFF121212);
+  final Color botBubbleColor = const Color(0xFF2C3E50).withOpacity(0.8);
+
+  @override
+  void dispose() {
+    player.dispose();
+    super.dispose();
+  }
 
   Future<void> _askMicPermission() async {
     final status = await Permission.microphone.request();
@@ -33,7 +45,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
     }
   }
 
-  Future<void> _onHoldStart() async {
+  Future<void> _startRecordingLogic() async {
     await _askMicPermission();
     if (await service.hasMicPermission()) {
       setState(() => recording = true);
@@ -41,21 +53,17 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
     }
   }
 
-  Future<void> _onHoldEnd() async {
+  Future<void> _stopRecordingLogic() async {
     setState(() {
       recording = false;
       loading = true;
-      userText = null;
-      botText = null;
     });
 
     try {
-      // 1) STT
       final text = await service.stopAndTranscribe();
       if (text == null || text.isEmpty) throw 'No se pudo transcribir.';
       setState(() => userText = text);
 
-      // 2) Gate (manda selección del dropdown; el backend puede resolver o detectar)
       final gateResp = await service.gate(text, attraction: selectedAttraction);
       final allowed = gateResp['allowed'] == true;
       final matched =
@@ -66,14 +74,13 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
           () => botText =
               'Fuera de tema: ${gateResp['reason'] ?? 'sin razón'}. Tema: $matched',
         );
+        setState(() => loading = false);
         return;
       }
 
-      // 3) Chat (acota al matched del gate)
       final answer = await service.chat(text, attraction: matched);
       setState(() => botText = answer);
 
-      // 4) TTS
       final bytes = await service.tts(answer, voice: widget.defaultVoice);
       final file = await service.saveBytesAsTempMp3(bytes);
       await player.play(DeviceFileSource(file.path));
@@ -87,93 +94,179 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
     }
   }
 
-  @override
-  void dispose() {
-    player.dispose();
-    super.dispose();
+  Widget _buildChatBubble(String text, {required bool isUser}) {
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        decoration: BoxDecoration(
+          color: isUser ? primaryColor.withOpacity(0.9) : botBubbleColor,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(20),
+            topRight: const Radius.circular(20),
+            bottomLeft: isUser ? const Radius.circular(20) : Radius.zero,
+            bottomRight: isUser ? Radius.zero : const Radius.circular(20),
+          ),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            height: 1.4,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final color = recording ? Colors.redAccent : Colors.blueGrey.shade800;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // selector del atractivo
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Scaffold(
+      backgroundColor: darkBackground,
+      body: SingleChildScrollView(
+        child: Column(
           children: [
-            const Text('Atractivo:  '),
-            DropdownButton<String>(
-              value: selectedAttraction,
-              items: kAttractions
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: loading
-                  ? null
-                  : (v) => setState(() => selectedAttraction = v),
+            // --- 1. HEADER LIMPIO (Solo botón atrás) ---
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                child: Row(
+                  // Al quitar el selector, alineamos el botón atrás a la izquierda
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.white70,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    // Aquí estaba el dropdown, eliminado.
+                  ],
+                ),
+              ),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
 
-        if (userText != null || botText != null)
-          Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
+            const SizedBox(height: 10),
+
+            // --- 2. ZONA DEL BANNER Y MICRÓFONO ---
+            Stack(
+              alignment: Alignment.bottomCenter,
+              clipBehavior: Clip.none,
+              children: [
+                // Fondo y Ajolote
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  height: 280,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    image: const DecorationImage(
+                      image: AssetImage('assets/images/Fondo.png'),
+                      fit: BoxFit.cover,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 40),
+                      child: Image.asset(
+                        'assets/images/ajolotito.png',
+                        height: 200,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Botón Micrófono
+                Positioned(bottom: -40, child: _buildMicButton()),
+              ],
+            ),
+
+            const SizedBox(height: 60),
+
+            // --- 3. CHAT ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (userText != null) ...[
-                    const Text(
-                      'Tú:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                  if (loading)
+                    const Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: CircularProgressIndicator(color: Colors.white),
                     ),
-                    Text(userText!),
-                    const SizedBox(height: 8),
-                  ],
-                  if (botText != null) ...[
-                    const Text(
-                      'Asistente:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+
+                  if (userText == null && botText == null && !loading)
+                    Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Text(
+                        "Hola, soy tu asistente inteligente.\nMantén presionado el micrófono para preguntar.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 16,
+                          height: 1.5,
+                        ),
+                      ),
                     ),
-                    Text(botText!),
-                  ],
+
+                  if (userText != null)
+                    _buildChatBubble(userText!, isUser: true),
+                  if (botText != null && !loading)
+                    _buildChatBubble(botText!, isUser: false),
+
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
 
-        GestureDetector(
-          onLongPressStart: (_) => _onHoldStart(),
-          onLongPressEnd: (_) => _onHoldEnd(),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              color: loading ? Colors.grey : color,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(color: color.withOpacity(0.4), blurRadius: 14),
-              ],
-            ),
+  Widget _buildMicButton() {
+    return GestureDetector(
+      onTapDown: (_) => _startRecordingLogic(),
+      onTapUp: (_) => _stopRecordingLogic(),
+      onTapCancel: () => _stopRecordingLogic(),
+      child: AvatarGlow(
+        animate: recording,
+        glowColor: primaryColor,
+        duration: const Duration(milliseconds: 2000),
+        repeat: true,
+        glowRadiusFactor: 0.6,
+        child: Material(
+          elevation: 15.0,
+          shape: const CircleBorder(),
+          color: Colors.transparent,
+          child: CircleAvatar(
+            backgroundColor: recording ? primaryColor : const Color(0xFF2C3E50),
+            radius: 40.0,
             child: Icon(
-              recording ? Icons.mic : Icons.mic_none,
+              recording ? Icons.mic : Icons.mic_none_outlined,
+              size: 35,
               color: Colors.white,
-              size: 30,
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        Text(
-          recording
-              ? 'Grabando… suelta para enviar'
-              : (loading ? 'Procesando…' : 'Mantén presionado para hablar'),
-          style: const TextStyle(fontSize: 13, color: Colors.black54),
-        ),
-      ],
+      ),
     );
   }
 }
